@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGLTF, useAnimations } from '@react-three/drei';
+import collisionManager from './CollisonManger';
+import { Html } from '@react-three/drei';
+import HealthBar from './HealthBar';
 import * as THREE from 'three';
+
 
 export default function Enemy({ position = [2, 1, 2] }) {
   const gltf = useGLTF('/Enemy.glb');
@@ -31,6 +35,23 @@ export default function Enemy({ position = [2, 1, 2] }) {
     action.play();
     currentAction.current = name;
   };
+
+useEffect(() => {
+  const id = `enemy-${Math.random()}`;
+  collisionManager.register(id, positionRef.current);
+
+  const updatePos = () => {
+    collisionManager.update(id, positionRef.current);
+  };
+  const interval = setInterval(updatePos, 100);  // Update every 100ms
+
+  return () => {
+    clearInterval(interval);
+    collisionManager.unregister(id);
+  };
+}, []);
+
+
 
   const handleAttack = (e) => {
     if (isDead.current || isBeingHit.current) return;
@@ -90,12 +111,17 @@ export default function Enemy({ position = [2, 1, 2] }) {
   }, [actions]);
 
   return (
-    <primitive
-      ref={modelRef}
-      object={gltf.scene}
-      scale={0.01}
-      receiveShadow
-    />
+    <>
+
+<group ref={modelRef}>
+  <primitive object={gltf.scene} scale={0.01} receiveShadow />
+  <Html distanceFactor={8} position={[0, 1, 0]}>
+    <HealthBar health={health} />
+  </Html>
+</group>
+
+   
+           </>
   );
 }
 

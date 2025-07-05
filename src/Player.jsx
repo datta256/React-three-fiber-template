@@ -1,6 +1,7 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useGLTF, useAnimations } from '@react-three/drei';
 import { useRef, useEffect, useMemo } from 'react';
+import collisionManager from './CollisonManger';
 import * as THREE from 'three';
 
 export default function Player() {
@@ -9,6 +10,7 @@ export default function Player() {
   const { actions, names } = useAnimations(gltf.animations, gltf.scene);
   const isPerformingAction = useRef(false);
   const modelRef = useRef();
+  const isBlocked = useRef(false);
 
   const position = useRef(new THREE.Vector3(0, 1, 0));
   const direction = useRef(new THREE.Vector3(0, 0, 0));
@@ -74,8 +76,14 @@ const triggerAction = (actionName) => {
 };
 
   useEffect(() => {
+
+
+
+  
     window.addEventListener('keydown', keyDown);
     window.addEventListener('keyup', keyUp);
+   
+  
 
     // Play idle by default when model loads
     actions.Idle?.reset().fadeIn(1).play();
@@ -84,8 +92,23 @@ const triggerAction = (actionName) => {
     return () => {
       window.removeEventListener('keydown', keyDown);
       window.removeEventListener('keyup', keyUp);
+  
+      
     };
   }, [actions]);
+const playerId = useMemo(() => `player-${Math.random()}`, []);
+useEffect(() => {
+  collisionManager.register(playerId, position.current);
+  const interval = setInterval(() => {
+    collisionManager.update(playerId, position.current);
+  }, 50);
+  return () => {
+    clearInterval(interval);
+    collisionManager.unregister(playerId);
+  };
+}, []);
+
+
 
   const playAnimation = (name) => {
     if (currentAction.current !== name) {
@@ -95,31 +118,43 @@ const triggerAction = (actionName) => {
     }
   };
 
-  useFrame(() => {
-    const moveX = (keys.current.d ? 1 : 0) - (keys.current.a ? 1 : 0);
-    const moveZ = (keys.current.s ? 1 : 0) - (keys.current.w ? 1 : 0);
+useFrame(() => {
+  const moveX = (keys.current.d ? 1 : 0) - (keys.current.a ? 1 : 0);
+  const moveZ = (keys.current.s ? 1 : 0) - (keys.current.w ? 1 : 0);
 
-    const isMoving = moveX !== 0 || moveZ !== 0;
-     if (!isPerformingAction.current) {
-      playAnimation(isMoving ? 'sprint' : 'Idle');
-    }
+  const isMoving = moveX !== 0 || moveZ !== 0;
 
-    if (isMoving && !isPerformingAction.current) {
-      direction.current.set(moveX, 0, moveZ).normalize();
-      position.current.add(direction.current.clone().multiplyScalar(velocity));
+  if (!isPerformingAction.current) {
+    playAnimation(isMoving ? 'sprint' : 'idle');
+  }
+
+  if (isMoving && !isPerformingAction.current) {
+    direction.current.set(moveX, 0, moveZ).normalize();
+
+    const nextPosition = position.current.clone().add(direction.current.clone().multiplyScalar(velocity));
+
+    // 🔑 Check for collision directly here using collisionManager:
+ const collides = collisionManager.isColliding(nextPosition, 0.5, playerId);
+
+
+    if (!collides) {
+      position.current.copy(nextPosition);
+
       if (modelRef.current) {
         modelRef.current.rotation.y = Math.atan2(direction.current.x, direction.current.z);
       }
     }
+  }
 
-    if (modelRef.current) {
-      modelRef.current.position.copy(position.current).add(new THREE.Vector3(0, 0.05, 0));
-    }
+  if (modelRef.current) {
+    modelRef.current.position.copy(position.current).add(new THREE.Vector3(0, 0.05, 0));
+  }
 
-    const targetCamPos = position.current.clone().add(cameraOffset);
-    camera.position.lerp(targetCamPos, 0.1);
-    camera.lookAt(position.current);
-  });
+  const targetCamPos = position.current.clone().add(cameraOffset);
+  camera.position.lerp(targetCamPos, 0.1);
+  camera.lookAt(position.current);
+});
+
 
   return (
     <primitive
