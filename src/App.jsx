@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import './App.css'
 import Player from './Player'
 import Ground from './Ground'
+import Enemy from './Enemy'
 
 function App() {
   return (
@@ -11,6 +12,7 @@ function App() {
       <ambientLight intensity={0.5} />
       <directionalLight position={[10, 10, 5]} castShadow />
     <Player />
+    <Enemy/>
       <Ground/>
    
 

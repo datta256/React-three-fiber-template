@@ -34,31 +34,42 @@ export default function Player() {
     if (keys.current.hasOwnProperty(k)) keys.current[k] = false;
   };
 
-   const triggerAction = (actionName) => {
-    if (!actions[actionName]) return;
-    isPerformingAction.current = true;
-    playAnimation(actionName);
+const triggerHitEvent = (actionName) => {
+  const event = new CustomEvent('playerAttack', {
+    detail: {
+      type: actionName,
+      position: position.current.clone(),  // Player's position
+    },
+  });
+  window.dispatchEvent(event);
+};
 
-    actions[actionName].clampWhenFinished = true;
-    actions[actionName].setLoop(THREE.LoopOnce);
-    actions[actionName].reset().fadeIn(0.1).play();
+const triggerAction = (actionName) => {
+  if (!actions[actionName]) return;
+  isPerformingAction.current = true;
+  playAnimation(actionName);
 
-    actions[actionName].getMixer().addEventListener('finished', () => {
-      isPerformingAction.current = false;
-      // Return to correct state
-      const moveX = (keys.current.d ? 1 : 0) - (keys.current.a ? 1 : 0);
-      const moveZ = (keys.current.s ? 1 : 0) - (keys.current.w ? 1 : 0);
-      const moving = moveX !== 0 || moveZ !== 0;
-      playAnimation(moving ? 'sprint' : 'Idle');
-    });
-  };
+  triggerHitEvent(actionName);  // 🔗 Broadcast attack
+
+  actions[actionName].clampWhenFinished = true;
+  actions[actionName].setLoop(THREE.LoopOnce);
+  actions[actionName].reset().fadeIn(0.1).play();
+
+  actions[actionName].getMixer().addEventListener('finished', () => {
+    isPerformingAction.current = false;
+    const moveX = (keys.current.d ? 1 : 0) - (keys.current.a ? 1 : 0);
+    const moveZ = (keys.current.s ? 1 : 0) - (keys.current.w ? 1 : 0);
+    const moving = moveX !== 0 || moveZ !== 0;
+    playAnimation(moving ? 'sprint' : 'Idle');
+  }, { once: true });
+};
 
   useEffect(() => {
     window.addEventListener('keydown', keyDown);
     window.addEventListener('keyup', keyUp);
 
     // Play idle by default when model loads
-    actions.idle?.reset().fadeIn(1).play();
+    actions.Idle?.reset().fadeIn(1).play();
     currentAction.current = 'Idle';
 
     return () => {
@@ -81,7 +92,7 @@ export default function Player() {
 
     const isMoving = moveX !== 0 || moveZ !== 0;
      if (!isPerformingAction.current) {
-      playAnimation(isMoving ? 'sprint' : 'idle');
+      playAnimation(isMoving ? 'sprint' : 'Idle');
     }
 
     if (isMoving && !isPerformingAction.current) {
