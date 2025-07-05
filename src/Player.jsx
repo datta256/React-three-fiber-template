@@ -4,7 +4,7 @@ import { useRef, useEffect, useMemo } from 'react';
 import collisionManager from './CollisonManger';
 import * as THREE from 'three';
 
-export default function Player() {
+export default function Player(props) {
   const { camera } = useThree();
   const gltf = useGLTF('/walkk.glb');
   const { actions, names } = useAnimations(gltf.animations, gltf.scene);
@@ -12,9 +12,12 @@ export default function Player() {
   const modelRef = useRef();
   const isBlocked = useRef(false);
 
+
+
   const position = useRef(new THREE.Vector3(0, 1, 0));
   const direction = useRef(new THREE.Vector3(0, 0, 0));
   const velocity = 0.1;
+  if (props.onMove) props.onMove(position.current.clone());
 
   const keys = useRef({ w: false, a: false, s: false, d: false });
   const currentAction = useRef(null);
