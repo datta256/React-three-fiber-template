@@ -49,7 +49,7 @@ export default function Player() {
       const moveX = (keys.current.d ? 1 : 0) - (keys.current.a ? 1 : 0);
       const moveZ = (keys.current.s ? 1 : 0) - (keys.current.w ? 1 : 0);
       const moving = moveX !== 0 || moveZ !== 0;
-      playAnimation(moving ? 'sprint' : 'idle');
+      playAnimation(moving ? 'sprint' : 'Idle');
     });
   };
 
@@ -59,7 +59,7 @@ export default function Player() {
 
     // Play idle by default when model loads
     actions.idle?.reset().fadeIn(1).play();
-    currentAction.current = 'idle';
+    currentAction.current = 'Idle';
 
     return () => {
       window.removeEventListener('keydown', keyDown);
