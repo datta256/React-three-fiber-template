@@ -11,19 +11,14 @@ export default function Enemy({ position = [2, 1, 2] }) {
   const lastHit = useRef(0);
   const isDead = useRef(false);
   const isBeingHit = useRef(false);
-  const currentAction = useRef('Idle');
-
-
-
+  const currentAction = useRef(null);
 
   const playAnimation = (name, loopOnce = false) => {
-    if (currentAction.current === name) return;
+    if (!actions[name] || currentAction.current === name) return;
 
     actions[currentAction.current]?.fadeOut(0.2);
 
     const action = actions[name];
-    if (!action) return;
-
     action.reset().fadeIn(0.3);
 
     if (loopOnce) {
@@ -40,12 +35,15 @@ export default function Enemy({ position = [2, 1, 2] }) {
   const handleAttack = (e) => {
     if (isDead.current || isBeingHit.current) return;
 
-    const { position: playerPos } = e.detail;
+    const { position: playerPos, forward: playerForward } = e.detail;
     const dist = playerPos.distanceTo(positionRef.current);
 
-    if (dist < 1.5 && Date.now() - lastHit.current > 800) {
+    const enemyDirection = new THREE.Vector3().subVectors(playerPos, positionRef.current).normalize();
+    const facingDot = playerForward.dot(enemyDirection);
+    
+    if (dist < 1.5 && facingDot > 0.5 && Date.now() - lastHit.current > 800) {
       lastHit.current = Date.now();
-      isBeingHit.current = true;  // Lock while being hit
+      isBeingHit.current = true;
 
       setHealth(prev => {
         const newHealth = Math.max(prev - 10, 0);
@@ -55,12 +53,10 @@ export default function Enemy({ position = [2, 1, 2] }) {
           playAnimation('die', true);
         } else {
           playAnimation('hit', true);
-
-          // Automatically return to idle after hit finishes
           actions['hit']?.getMixer().addEventListener('finished', () => {
             if (!isDead.current) {
               playAnimation('Idle');
-              isBeingHit.current = false;  // Unlock after hit
+              isBeingHit.current = false;
             }
           }, { once: true });
         }
@@ -70,35 +66,28 @@ export default function Enemy({ position = [2, 1, 2] }) {
     }
   };
 
-useEffect(() => {
-  modelRef.current.position.copy(positionRef.current);
-
-  // Reset flags & health
-  isDead.current = false;
-  isBeingHit.current = false;
-  setHealth(100);
-
-  // Reset all actions to T-pose frame
-  Object.values(actions).forEach(action => {
-    action.stop();
-  });
-
-  // Play idle once model and actions are ready
-  const waitForAnimations = () => {
-    if (actions['idle']) {
-      playAnimation('idle');
-    } else {
-      requestAnimationFrame(waitForAnimations);
+  useEffect(() => {
+    if (modelRef.current) {
+      modelRef.current.position.copy(positionRef.current);
     }
-  };
 
-  waitForAnimations();
+    isDead.current = false;
+    isBeingHit.current = false;
+    setHealth(100);
 
-  window.addEventListener('playerAttack', handleAttack);
-  return () => window.removeEventListener('playerAttack', handleAttack);
-}, [actions]);
+    const waitForAnimations = () => {
+      if (actions['Idle']) {   // ✅ Use correct lowercase name
+        playAnimation('Idle');
+      } else {
+        requestAnimationFrame(waitForAnimations);
+      }
+    };
 
+    waitForAnimations();
 
+    window.addEventListener('playerAttack', handleAttack);
+    return () => window.removeEventListener('playerAttack', handleAttack);
+  }, [actions]);
 
   return (
     <primitive
@@ -109,3 +98,4 @@ useEffect(() => {
     />
   );
 }
+

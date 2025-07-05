@@ -34,22 +34,31 @@ export default function Player() {
     if (keys.current.hasOwnProperty(k)) keys.current[k] = false;
   };
 
-const triggerHitEvent = (actionName) => {
-  const event = new CustomEvent('playerAttack', {
+ 
+
+
+const triggerHitEvent = () => {
+  if (!modelRef.current) return;  // Prevent undefined error
+
+  const playerForward = new THREE.Vector3(0, 0, -1)
+    .applyQuaternion(modelRef.current.quaternion)
+    .normalize();
+
+  window.dispatchEvent(new CustomEvent('playerAttack', {
     detail: {
-      type: actionName,
-      position: position.current.clone(),  // Player's position
-    },
-  });
-  window.dispatchEvent(event);
+      position: position.current.clone(),
+      forward: playerForward
+    }
+  }));
 };
+
 
 const triggerAction = (actionName) => {
   if (!actions[actionName]) return;
   isPerformingAction.current = true;
   playAnimation(actionName);
 
-  triggerHitEvent(actionName);  // 🔗 Broadcast attack
+  triggerHitEvent();  // 🔗 Broadcast attack
 
   actions[actionName].clampWhenFinished = true;
   actions[actionName].setLoop(THREE.LoopOnce);
