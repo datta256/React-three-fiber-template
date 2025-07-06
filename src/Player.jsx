@@ -37,6 +37,17 @@ export default function Player(props) {
     if (keys.current.hasOwnProperty(k)) keys.current[k] = false;
   };
 
+  const dispatchPlayerAttack = () => {
+  if (!modelRef.current) return;
+  const playerPosition = position.current.clone();
+  const playerForward = new THREE.Vector3(0, 0, -1).applyQuaternion(modelRef.current.quaternion).normalize();
+
+  window.dispatchEvent(new CustomEvent('playerAttack', {
+    detail: { position: playerPosition, forward: playerForward }
+  }));
+};
+
+
   const triggerAction = (actionName) => {
     if (!actions[actionName] || props.isdead || hasDied) return;  // ✅ Block actions if dead
     isPerformingAction.current = true;
@@ -44,6 +55,7 @@ export default function Player(props) {
     actions[actionName].clampWhenFinished = true;
     actions[actionName].setLoop(THREE.LoopOnce);
     actions[actionName].reset().fadeIn(0.1).play();
+    dispatchPlayerAttack();
     actions[actionName].getMixer().addEventListener('finished', () => {
       isPerformingAction.current = false;
       const moveX = (keys.current.d ? 1 : 0) - (keys.current.a ? 1 : 0);
