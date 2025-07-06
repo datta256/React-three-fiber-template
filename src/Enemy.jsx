@@ -4,7 +4,8 @@ import { useFrame } from '@react-three/fiber';
 import HealthBar from './HealthBar';
 import * as THREE from 'three';
 
-export default function Enemy({ targetPosition }) {
+export default function Enemy({ targetPosition, onAttack }) {
+
   const gltf = useGLTF('/Enemy.glb');
   const { actions } = useAnimations(gltf.animations, gltf.scene);
 
@@ -96,7 +97,7 @@ export default function Enemy({ targetPosition }) {
         attackCooldown.current = Date.now();
         const attackType = Math.random() > 0.5 ? 'Punch' : 'kick';
         playAnimation(attackType, true);
-
+        if (onAttack) onAttack();
         actions[attackType]?.getMixer().addEventListener('finished', () => {
           isAttacking.current = false;
           if (!isDead.current) playAnimation('Idle');
