@@ -17,6 +17,12 @@ function App() {
 
   const [wave, setWave] = useState(1);
   const [enemies, setEnemies] = useState([]);
+  const [enemyPositions, setEnemyPositions] = useState({});  // id: position
+
+// Update enemyPositions each frame from each Enemy
+const updateEnemyPosition = (id, pos) => {
+  setEnemyPositions(prev => ({ ...prev, [id]: pos.clone() }));
+};
 
 
   const startGame = () => {
@@ -41,18 +47,24 @@ function App() {
     setEnemies(prev => prev.filter(enemy => enemy.id !== id));
   };
 
-  const spawnWave = (waveNumber) => {
-    const numEnemies = 2 + waveNumber;  // For example: Wave 1 = 3, Wave 2 = 4, etc.
-    const newEnemies = Array.from({ length: numEnemies }, (_, index) => ({
+const spawnWave = (waveNumber) => {
+  const numEnemies = 2 + waveNumber;
+  const radius = 5 + waveNumber * 1.5;  // Increase radius with each wave
+
+  const newEnemies = Array.from({ length: numEnemies }, (_, index) => {
+    const angle = (index / numEnemies) * Math.PI * 2;
+    const x = Math.cos(angle) * radius;
+    const z = Math.sin(angle) * radius;
+
+    return {
       id: `${waveNumber}-${index}-${Date.now()}`,
-      position: new THREE.Vector3(
-        Math.random() * 10 - 5, 
-        1, 
-        Math.random() * 10 - 5
-      )
-    }));
-    setEnemies(newEnemies);
-  };
+      position: new THREE.Vector3(x, 1, z)
+    };
+  });
+
+  setEnemies(newEnemies);
+};
+
 
   const handleRespawn = () => {
     setPlayerHealth(100);
@@ -103,8 +115,10 @@ function App() {
                 id={enemy.id}
                 position={enemy.position}
                 targetPosition={playerPos}
+                updatePosition={(pos) => updateEnemyPosition(enemy.id, pos)}
+                allEnemyPositions={enemies.map(e => e.position)}
                 onAttack={handleEnemyAttack}
-                onDeath={() => handleEnemyDeath(enemy.id)}
+                ondeath={() => handleEnemyDeath(enemy.id)}
               />
             ))}
           </>

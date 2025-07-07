@@ -6,7 +6,7 @@ import { useFrame } from '@react-three/fiber';
 import HealthBar from './HealthBar';
 import * as THREE from 'three';
 
-export default function Enemy({ targetPosition, onAttack }) {
+export default function Enemy({ targetPosition, onAttack, ondeath, allEnemyPositions,updatePosition,position }) {
 
   const gltf = useGLTF('/Enemy.glb');
 const clonedScene = useRef();
@@ -17,10 +17,10 @@ if (!clonedScene.current) {
 const { actions } = useAnimations(gltf.animations, clonedScene.current);
 
   const groupRef = useRef();
-  const positionRef = useRef(new THREE.Vector3(2, 1, 2));
+  const positionRef = useRef(position.clone());
   const velocity = 0.03;
 
-  const [health, setHealth] = useState(100);
+  const [health, setHealth] = useState(1);
   const isDead = useRef(false);
   const isAttacking = useRef(false);
   const currentAction = useRef(null);
@@ -54,6 +54,10 @@ const { actions } = useAnimations(gltf.animations, clonedScene.current);
         isDead.current = true;
         isAttacking.current = false;
         playAnimation('die', true);
+       // Wait for animation to finish before triggering death removal
+  actions['die']?.getMixer().addEventListener('finished', () => {
+    ondeath();  // 🔑 Now called after death animation finishes
+  }, { once: true });
       } else {
         playAnimation('hit', true);
         actions['hit']?.getMixer().addEventListener('finished', () => {
@@ -90,6 +94,19 @@ const { actions } = useAnimations(gltf.animations, clonedScene.current);
     if (!groupRef.current || isDead.current || !targetPosition) return;
 
     const dist = positionRef.current.distanceTo(targetPosition);
+
+    updatePosition(positionRef.current);
+
+    const avoidanceForce = new THREE.Vector3();
+
+  allEnemyPositions.forEach(otherPos => {
+    if (otherPos.equals(positionRef.current)) return; // Skip self
+    const distToOther = positionRef.current.distanceTo(otherPos);
+    if (distToOther < 10) {
+      const pushDir = new THREE.Vector3().subVectors(positionRef.current, otherPos).normalize();
+      avoidanceForce.add(pushDir.multiplyScalar(0.03));
+    }
+  });
 
     if (dist > 1.5 && !isAttacking.current) {
       const direction = new THREE.Vector3().subVectors(targetPosition, positionRef.current).normalize();
