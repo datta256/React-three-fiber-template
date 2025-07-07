@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { useGLTF, useAnimations, Html } from '@react-three/drei';
+import { useGLTF, useAnimations, Html, Clone } from '@react-three/drei';
+import { clone } from 'three/examples/jsm/utils/SkeletonUtils';
+
 import { useFrame } from '@react-three/fiber';
 import HealthBar from './HealthBar';
 import * as THREE from 'three';
@@ -7,7 +9,12 @@ import * as THREE from 'three';
 export default function Enemy({ targetPosition, onAttack }) {
 
   const gltf = useGLTF('/Enemy.glb');
-  const { actions } = useAnimations(gltf.animations, gltf.scene);
+const clonedScene = useRef();
+if (!clonedScene.current) {
+  clonedScene.current = clone(gltf.scene);  // ✅ Correct cloning
+}
+
+const { actions } = useAnimations(gltf.animations, clonedScene.current);
 
   const groupRef = useRef();
   const positionRef = useRef(new THREE.Vector3(2, 1, 2));
@@ -112,7 +119,7 @@ export default function Enemy({ targetPosition, onAttack }) {
 
   return (
     <group ref={groupRef} position={positionRef.current}>
-      <primitive object={gltf.scene} scale={0.01} receiveShadow />
+      <primitive object={clonedScene.current} scale={0.01} receiveShadow />
       <Html distanceFactor={8} position={[0, 1, 0]}>
         <HealthBar health={health} />
       </Html>
